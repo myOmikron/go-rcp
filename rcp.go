@@ -13,15 +13,15 @@ type RCPConfig struct {
 	SharedSecret     string
 }
 
-func GetChecksum(request map[string]string, salt string, config *RCPConfig) (checksum string) {
+func GetChecksum(request *map[string]string, salt string, config *RCPConfig) (checksum string) {
 	var currentTimestamp int64
 	if config.UseTimeComponent {
 		currentTimestamp = time.Now().UTC().Unix()
 	}
 
 	// Create sorted slice of keys
-	keys := make([]string, 0, len(request))
-	for _, k := range request {
+	keys := make([]string, 0, len(*request))
+	for _, k := range *request {
 		keys = append(keys, k)
 	}
 	sort.Strings(keys)
@@ -29,7 +29,7 @@ func GetChecksum(request map[string]string, salt string, config *RCPConfig) (che
 	var builder string
 	for _, k := range keys {
 		// Append key + value
-		builder += k + request[k]
+		builder += k + (*request)[k]
 	}
 
 	// Append shared secret

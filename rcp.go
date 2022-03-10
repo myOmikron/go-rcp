@@ -4,7 +4,6 @@ import (
 	"crypto/sha512"
 	"fmt"
 	"sort"
-	"strconv"
 	"time"
 )
 
@@ -37,7 +36,7 @@ func GetChecksum(request *map[string]string, salt string, config *RCPConfig) (ch
 
 	if config.UseTimeComponent {
 		// Append timestamp
-		builder += strconv.FormatInt(currentTimestamp, 64)
+		builder += string(currentTimestamp)
 	}
 
 	// Prefix with salt

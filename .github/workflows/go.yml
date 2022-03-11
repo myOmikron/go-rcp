@@ -1,0 +1,10 @@
+- name: Go Coverage Badge
+  uses: tj-actions/coverage-badge-go@v1.1
+  with:
+    filename: "coverage.out"
+    color: "green"
+    green: 70
+    target: "README.md"
+    text: "Coverage"
+    value: ""
+    yellow: 30

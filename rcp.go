@@ -70,8 +70,6 @@ func ValidateChecksum(m *map[string]string, checksum string, salt string, config
 			}
 		}
 
-		close(channel)
-
 	} else {
 		c := make(chan string)
 		go createHash(builder, 0, false, c)

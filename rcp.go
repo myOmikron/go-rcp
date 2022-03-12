@@ -22,6 +22,18 @@ func sortKeys(m *map[string]string) (keys []string) {
 	return
 }
 
+func createHash(builder string, timestamp int64, useTimeStamp bool, c chan<- string) {
+	hash := sha512.New()
+	if useTimeStamp {
+		builder += fmt.Sprint(timestamp)
+	}
+
+	hash.Write([]byte(builder))
+	hashed := hash.Sum(nil)
+
+	c <- fmt.Sprintf("%x", hashed)
+}
+
 func ValidateChecksum(m *map[string]string, checksum string, salt string, config *RCPConfig) (b bool) {
 	var currentTimestamp int64
 	if config.UseTimeComponent {
@@ -40,31 +52,30 @@ func ValidateChecksum(m *map[string]string, checksum string, salt string, config
 	// Append shared secret
 	builder += config.SharedSecret
 
-	hash := sha512.New()
+	// Prefix with salt
+	builder = salt + builder
+
 	if config.UseTimeComponent {
-		for i := -config.TimeDelta; i < config.TimeDelta; i++ {
-			// Append timestamp
-			timestamp := currentTimestamp + i
-			tmpBuilder := builder + fmt.Sprint(timestamp)
+		channel := make(chan string, config.TimeDelta*2+1)
+		for i := -config.TimeDelta; i <= config.TimeDelta; i++ {
+			func() {
+				go createHash(builder, currentTimestamp+i, true, channel)
+			}()
+		}
 
-			// Prefix with salt
-			tmpBuilder = salt + tmpBuilder
-
-			hash.Reset()
-			hash.Write([]byte(tmpBuilder))
-			hashed := hash.Sum(nil)
-			if fmt.Sprintf("%x", hashed) == checksum {
+		for c := range channel {
+			if c == checksum {
 				b = true
 				break
 			}
 		}
-	} else {
-		// Prefix with salt
-		builder = salt + builder
 
-		hash.Write([]byte(builder))
-		hashed := hash.Sum(nil)
-		b = fmt.Sprintf("%x", hashed) == checksum
+		close(channel)
+
+	} else {
+		c := make(chan string)
+		go createHash(builder, 0, false, c)
+		b = <-c == checksum
 	}
 
 	return
@@ -88,13 +99,13 @@ func GetChecksum(m *map[string]string, salt string, config *RCPConfig) (checksum
 	// Append shared secret
 	builder += config.SharedSecret
 
+	// Prefix with salt
+	builder = salt + builder
+
 	if config.UseTimeComponent {
 		// Append timestamp
 		builder += fmt.Sprint(currentTimestamp)
 	}
-
-	// Prefix with salt
-	builder = salt + builder
 
 	// Calculate SHA512
 	hash := sha512.New()

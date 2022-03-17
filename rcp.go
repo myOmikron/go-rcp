@@ -13,7 +13,7 @@ type RCPConfig struct {
 	TimeDelta        int64
 }
 
-func sortKeys(m *map[string]string) (keys []string) {
+func sortKeys(m *map[string]interface{}) (keys []string) {
 	keys = make([]string, 0, len(*m))
 	for k, _ := range *m {
 		keys = append(keys, k)
@@ -22,19 +22,7 @@ func sortKeys(m *map[string]string) (keys []string) {
 	return
 }
 
-func createHash(builder string, timestamp int64, useTimeStamp bool, c chan<- string) {
-	hash := sha512.New()
-	if useTimeStamp {
-		builder += fmt.Sprint(timestamp)
-	}
-
-	hash.Write([]byte(builder))
-	hashed := hash.Sum(nil)
-
-	c <- fmt.Sprintf("%x", hashed)
-}
-
-func ValidateChecksum(m *map[string]string, checksum string, salt string, config *RCPConfig) (b bool) {
+func ValidateChecksum(m *map[string]interface{}, checksum string, salt string, config *RCPConfig) (b bool) {
 	var currentTimestamp int64
 	if config.UseTimeComponent {
 		currentTimestamp = time.Now().UTC().Unix()
@@ -46,7 +34,7 @@ func ValidateChecksum(m *map[string]string, checksum string, salt string, config
 	var builder string
 	for _, k := range keys {
 		// Append key + value
-		builder += k + (*m)[k]
+		builder += k + fmt.Sprint((*m)[k])
 	}
 
 	// Append shared secret
@@ -55,31 +43,32 @@ func ValidateChecksum(m *map[string]string, checksum string, salt string, config
 	// Prefix with salt
 	builder = salt + builder
 
+	h := sha512.New()
 	if config.UseTimeComponent {
-		channel := make(chan string, config.TimeDelta*2+1)
 		for i := -config.TimeDelta; i <= config.TimeDelta; i++ {
-			func() {
-				go createHash(builder, currentTimestamp+i, true, channel)
-			}()
-		}
-
-		for c := range channel {
-			if c == checksum {
+			tmpBuilder := builder + fmt.Sprint(currentTimestamp+i)
+			h.Reset()
+			h.Write([]byte(tmpBuilder))
+			hashed := h.Sum(nil)
+			if fmt.Sprintf("%x", hashed) == checksum {
 				b = true
 				break
 			}
+
 		}
 
 	} else {
-		c := make(chan string)
-		go createHash(builder, 0, false, c)
-		b = <-c == checksum
+		h.Write([]byte(builder))
+		hashed := h.Sum(nil)
+		if fmt.Sprintf("%x", hashed) == checksum {
+			b = true
+		}
 	}
 
 	return
 }
 
-func GetChecksum(m *map[string]string, salt string, config *RCPConfig) (checksum string) {
+func GetChecksum(m *map[string]interface{}, salt string, config *RCPConfig) (checksum string) {
 	var currentTimestamp int64
 	if config.UseTimeComponent {
 		currentTimestamp = time.Now().UTC().Unix()
@@ -91,7 +80,7 @@ func GetChecksum(m *map[string]string, salt string, config *RCPConfig) (checksum
 	var builder string
 	for _, k := range keys {
 		// Append key + value
-		builder += k + (*m)[k]
+		builder += k + fmt.Sprint((*m)[k])
 	}
 
 	// Append shared secret

@@ -5,7 +5,7 @@ import (
 )
 
 func TestSortKeys(t *testing.T) {
-	m := make(map[string]string)
+	m := make(map[string]interface{})
 	if len(sortKeys(&m)) != 0 {
 		t.Error("Keys should be empty")
 		return
@@ -25,7 +25,7 @@ func TestValidateChecksum(t *testing.T) {
 		SharedSecret:     "Hallo-123",
 		TimeDelta:        5,
 	}
-	m := make(map[string]string)
+	m := make(map[string]interface{})
 
 	// Output of reference implementation:
 	// rc_protocol.get_checksum({}, "Hallo-123", use_time_component=False)
@@ -60,7 +60,7 @@ func TestGetChecksum(t *testing.T) {
 		SharedSecret:     "Hallo-123",
 		TimeDelta:        5,
 	}
-	m := make(map[string]string)
+	m := make(map[string]interface{})
 
 	// Output of reference implementation:
 	// rc_protocol.get_checksum({}, "Hallo-123", use_time_component=False)
